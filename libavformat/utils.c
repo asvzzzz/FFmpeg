@@ -3779,6 +3779,24 @@ FF_ENABLE_DEPRECATION_WARNINGS
             break;
         }
 
+        //asvzzz fastdetect
+        if (!(ic->ctx_flags & AVFMTCTX_NOHEADER))
+            if (ic->fastdetect)
+            {
+                int data_found_cnt = 0;
+                for (int n = 0; n < ic->nb_streams; n++)
+                {
+                    if (ic->streams[n]->codec_info_nb_frames)
+                        data_found_cnt++;
+                }
+                if (data_found_cnt == ic->nb_streams)
+                {
+                    av_log(ic, AV_LOG_DEBUG, "FASTDETECT\n");
+                    break;
+                }
+            }
+        //asvzzz
+
         pkt = &pkt1;
 
         if (!(ic->flags & AVFMT_FLAG_NOBUFFER)) {

@@ -3330,6 +3330,11 @@ typedef struct AVCodecContext {
      * used as reference pictures).
      */
     int extra_hw_frames;
+
+//asvzzz non-existing PPS
+    int ne_pps_key;
+//
+
 } AVCodecContext;
 
 #if FF_API_CODEC_GET_SET

@@ -111,6 +111,9 @@ static const AVOption avformat_options[] = {
 {"protocol_blacklist", "List of protocols that are not allowed to be used", OFFSET(protocol_blacklist), AV_OPT_TYPE_STRING, { .str = NULL },  CHAR_MIN, CHAR_MAX, D },
 {"max_streams", "maximum number of streams", OFFSET(max_streams), AV_OPT_TYPE_INT, { .i64 = 1000 }, 0, INT_MAX, D },
 {"skip_estimate_duration_from_pts", "skip duration calculation in estimate_timings_from_pts", OFFSET(skip_estimate_duration_from_pts), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, D},
+//asvzzz fastdetect
+{ "fastdetect", "streams formats fast detection", OFFSET(fastdetect), AV_OPT_TYPE_INT,{.i64 = DEFAULT }, INT_MIN, INT_MAX, E | D },
+//asvzzz
 {NULL},
 };
 

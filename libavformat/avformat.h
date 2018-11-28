@@ -1944,6 +1944,14 @@ typedef struct AVFormatContext {
      * - decoding: set by user
      */
     int skip_estimate_duration_from_pts;
+
+//asvzzz fastdetect
+    /*
+    break format detection in avformat_find_stream_info when at least one frame for each stream was received.
+    */
+    int fastdetect;
+//asvzzz
+
 } AVFormatContext;
 
 #if FF_API_FORMAT_GET_SET
