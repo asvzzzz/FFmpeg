@@ -35,6 +35,9 @@
 #include "tls.h"
 #include "url.h"
 
+ //asvzzz rtsp_range_clock
+int g_use_ntp_range = 1;
+
 static const struct RTSPStatusMessage {
     enum RTSPStatusCode code;
     const char *message;
@@ -543,10 +546,74 @@ static int rtsp_read_play(AVFormatContext *s)
         if (rt->state == RTSP_STATE_PAUSED) {
             cmd[0] = 0;
         } else {
-            snprintf(cmd, sizeof(cmd),
-                     "Range: npt=%"PRId64".%03"PRId64"-\r\n",
-                     rt->seek_timestamp / AV_TIME_BASE,
-                     rt->seek_timestamp / (AV_TIME_BASE / 1000) % 1000);
+//asvzzz rtsp_range_clock
+            if (rt->seek_timestamp)
+            {
+                if (!g_use_ntp_range)
+                {
+                    struct tm * timeinfo;
+                    char sz_time1[80];
+                    char sz_time2[80];
+                    time_t ttime;
+                    time_t seek_time = rt->seek_timestamp;
+                    time_t seek_time_end = rt->seek_timestamp_end;
+
+                    //                timeinfo = gmtime(&seek_time);
+                    timeinfo = localtime(&seek_time);
+
+                    strftime(sz_time1, sizeof(sz_time1), "%Y%m%dT%H%M%SZ", timeinfo);
+                    //                ttime = mktime(timeinfo) - timezone + 5;
+                    if (seek_time_end)
+                    {
+                        ttime = seek_time_end;
+                        av_log(s, AV_LOG_DEBUG, "seek_time_end!=0, ttime=%d\n", ttime);
+                    }
+                    else
+                    {
+                        ttime = mktime(timeinfo) + 3600;
+                        av_log(s, AV_LOG_DEBUG, "seek_time_end==0, ttime=%d\n", ttime);
+                    }
+
+                    //                timeinfo = gmtime(&ttime);
+                    timeinfo = localtime(&ttime);
+
+                    strftime(sz_time2, sizeof(sz_time2), "%Y%m%dT%H%M%SZ", timeinfo);
+                    snprintf(cmd, sizeof(cmd), "Require: onvif-replay\r\nRange: clock=%s-%s\r\n", sz_time1, sz_time2);
+                }
+                else
+                {
+                    snprintf(cmd, sizeof(cmd),
+                        "Range: npt=%"PRId64".%03"PRId64"-\r\n",
+                        rt->seek_timestamp / AV_TIME_BASE,
+                        rt->seek_timestamp / (AV_TIME_BASE / 1000) % 1000);
+                }
+            }
+//asvzzz rtsp_range_clock
+//asvzzz rate_control
+            av_log(s, AV_LOG_DEBUG, "rate_control=%d, scale_control=%d\n", rt->rate_control, rt->scale_control);
+
+            if (rt->rate_control >= 0)
+            {
+                strcat(cmd, "Rate-Control: ");
+                if (rt->rate_control == 0)
+                {
+                    strcat(cmd, "no\r\n");
+                }
+                else
+                {
+                    strcat(cmd, "yes\r\n");
+                }
+            }
+//asvzzz rate_control
+
+//asvzzz scale_control
+            if (rt->scale_control)
+            {
+                char sztmp[32] = { 0 };
+                snprintf(sztmp, sizeof(sztmp), "Scale: %d\r\n", rt->scale_control);
+                strcat(cmd, sztmp);
+            }
+//asvzzz scale_control
         }
         ff_rtsp_send_cmd(s, "PLAY", rt->control_uri, cmd, reply, NULL);
         if (reply->status_code != RTSP_STATUS_OK) {
@@ -931,9 +998,31 @@ static int rtsp_read_seek(AVFormatContext *s, int stream_index,
     RTSPState *rt = s->priv_data;
     int ret;
 
-    rt->seek_timestamp = av_rescale_q(timestamp,
-                                      s->streams[stream_index]->time_base,
-                                      AV_TIME_BASE_Q);
+//asvzzz rtsp_range_clock
+    av_log(NULL, AV_LOG_DEBUG, "rtsp_read_seek %llu, stream_index=%d, flags=%d\n", timestamp, stream_index, flags);
+
+    if (abs(stream_index) > 0xFF)
+    {
+        g_use_ntp_range = 0;
+        rt->seek_timestamp = timestamp;
+        rt->seek_timestamp_end = stream_index;
+    }
+    else
+        if (stream_index == 0xFF)
+        {
+            g_use_ntp_range = 0;
+            rt->seek_timestamp = timestamp;
+        }
+        else
+        {
+            g_use_ntp_range = 1;
+            rt->seek_timestamp = av_rescale_q(timestamp,
+                s->streams[stream_index]->time_base,
+                AV_TIME_BASE_Q);
+        }
+    av_log(NULL, AV_LOG_DEBUG, "rt->seek_timestamp = %llu, g_use_ntp_range=%d\n", rt->seek_timestamp, g_use_ntp_range);
+//asvzzz
+
     switch(rt->state) {
     default:
     case RTSP_STATE_IDLE:

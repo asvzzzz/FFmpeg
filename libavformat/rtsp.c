@@ -105,6 +105,17 @@ const AVOption ff_rtsp_options[] = {
 #if FF_API_OLD_RTSP_OPTIONS
     { "user-agent", "override User-Agent header (deprecated, use user_agent)", OFFSET(user_agent), AV_OPT_TYPE_STRING, {.str = LIBAVFORMAT_IDENT}, 0, 0, DEC },
 #endif
+
+//asvzzz force_transport
+{ "force_transport", "ingnore lower transport in server replay", OFFSET(force_transport), AV_OPT_TYPE_INT,{.i64 = 0 }, 0, 65535, DEC | ENC },
+//asvzzz 
+//asvzzz rate_control
+{ "rate_control", "Set rate control mode", OFFSET(rate_control), AV_OPT_TYPE_INT,{.i64 = -1 }, -1, 65535, DEC | ENC },
+//asvzzz
+//asvzzz  scale_control
+{ "rtsp_scale", "Set scale value for rtsp", OFFSET(scale_control), AV_OPT_TYPE_INT,{.i64 = 0 }, -32, 65535, DEC | ENC },
+//asvzzz
+
     { NULL },
 };
 
@@ -1548,6 +1559,14 @@ int ff_rtsp_make_setup_request(AVFormatContext *s, const char *host, int port,
                         "RealChallenge2: %s, sd=%s\r\n",
                         rt->session_id, real_res, real_csum);
         }
+
+//asvzzz
+#ifdef RTSP_RANGE_CLOCK
+        if (rt->seek_timestamp)
+            av_strlcatf(cmd, sizeof(cmd), "Require: onvif-replay\r\n");
+#endif
+//asvzzz
+
         ff_rtsp_send_cmd(s, "SETUP", rtsp_st->control_url, cmd, reply, NULL);
         if (reply->status_code == 461 /* Unsupported protocol */ && i == 0) {
             err = 1;
@@ -1556,6 +1575,15 @@ int ff_rtsp_make_setup_request(AVFormatContext *s, const char *host, int port,
                    reply->nb_transports != 1) {
             err = ff_rtsp_averror(reply->status_code, AVERROR_INVALIDDATA);
             goto fail;
+        }
+
+//asvzzz force_transport
+        if (rt->force_transport)
+        {
+            for (int n = 0; n < RTSP_MAX_TRANSPORTS; n++)
+            {
+                reply->transports[n].lower_transport = lower_transport;
+            }
         }
 
         /* XXX: same protocol for all streams is required */
@@ -1908,6 +1936,9 @@ redirect:
     av_strlcpy(rt->real_challenge, real_challenge, sizeof(rt->real_challenge));
     rt->state = RTSP_STATE_IDLE;
     rt->seek_timestamp = 0; /* default is to start stream at position zero */
+//asvzzz rtsp_range_clock
+    rt->seek_timestamp_end = 0;
+//asvzzz rtsp_range_clock
     return 0;
  fail:
     ff_rtsp_close_streams(s);

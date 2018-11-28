@@ -4661,6 +4661,62 @@ static int transcode_step(void)
     return reap_filters(0);
 }
 
+//asvzzz rtsp_range_clock
+static char* GetStringFromTime(time_t ttime)
+{
+    struct tm* timeinfo;
+    static char sztime[32];
+
+    //    timeinfo = gmtime(&ttime);
+    timeinfo = localtime(&ttime);
+
+    strftime(sztime, sizeof(sztime), "%Y%m%dT%H%M%SZ", timeinfo);
+    //  av_log(NULL, AV_LOG_DEBUG, "GetStringFromTime sztime=%s\n", sztime);
+    return sztime;
+}
+
+static time_t GetTimeFromString(char* szTime)
+{
+    struct tm timeinfo;
+    char tmp[16] = { 0 };
+    char sztime[32];
+    time_t ttime;
+    memset(&timeinfo, 0, sizeof(timeinfo));
+
+    if ((!szTime) || (strlen(szTime) < 15))
+    {
+        av_log(NULL, AV_LOG_DEBUG, "Invalid time in range\n");
+        return 0;
+    }
+
+    memcpy(tmp, szTime, 4);
+    timeinfo.tm_year = atoi(tmp) - 1900;
+    memset(tmp, 0, 16);
+    memcpy(tmp, szTime + 4, 2);
+    timeinfo.tm_mon = atoi(tmp) - 1;
+    memset(tmp, 0, 16);
+    memcpy(tmp, szTime + 6, 2);
+    timeinfo.tm_mday = atoi(tmp);
+    memset(tmp, 0, 16);
+    memcpy(tmp, szTime + 9, 2);
+    timeinfo.tm_hour = atoi(tmp);
+    memset(tmp, 0, 16);
+    memcpy(tmp, szTime + 11, 2);
+    timeinfo.tm_min = atoi(tmp);
+    memset(tmp, 0, 16);
+    memcpy(tmp, szTime + 13, 2);
+    timeinfo.tm_sec = atoi(tmp);
+
+    //    ttime = mktime(&timeinfo) - timezone;
+    ttime = mktime(&timeinfo);
+
+    strcpy(sztime, GetStringFromTime(ttime));
+    av_log(NULL, AV_LOG_DEBUG, "GetTimeFromString sztime=%s\n", sztime);
+    return ttime;
+}
+//asvzzz
+
+
 /*
  * The following code is the main loop of the file converter
  */
@@ -4675,7 +4731,6 @@ static int transcode(void)
 //asvzzz stats
     time_t start_time;
     time_t end_time;
-    int frame_counter = 0;
 //
 
     ret = transcode_init();
@@ -4697,8 +4752,105 @@ static int transcode(void)
         goto fail;
 #endif
 
+    //asvzzz rtsp_range_clock
+    int64_t range_start = GetTimeFromString(szrange_start);
+    int64_t range_end = GetTimeFromString(szrange_end);
+    int64_t processing_time = range_start;
+    int frame_counter = 0;
+    //asvzzz
+
+    //asvzzz rtsp_range_npt
+    int64_t npt_range_interval64 = 90000 * (int64_t)npt_range_interval;
+    int64_t npt_range_start64 = 90000 * (int64_t)npt_range_start;
+    int64_t npt_range_end64 = 90000 * (int64_t)npt_range_end;
+    int64_t npt_processing_time64 = npt_range_start64;
+
+    AVFormatContext *ictx = input_files[0]->ctx;
+    av_log(ictx, AV_LOG_DEBUG, "range_interval=%d\n", range_interval);
+    av_log(ictx, AV_LOG_DEBUG, "npt_range_interval=%d\n", npt_range_interval);
+    //asvzzz
+
     while (!received_sigterm) {
         int64_t cur_time= av_gettime_relative();
+
+        //asvzzz rtsp_range_clock
+        if (range_start)
+        {
+            if (0 == range_interval)
+            {
+                if (0 == frame_counter)
+                {
+                    ret = av_seek_frame(ictx, range_end, processing_time, 0);
+                    av_log(ictx, AV_LOG_DEBUG, "starttime av_seek_frame %s\n", GetStringFromTime(processing_time));
+                    if (0 == ret)
+                    {
+                        avformat_flush(ictx);
+                    }
+                    else
+                    {
+                        av_log(ictx, AV_LOG_DEBUG, "starttime Range capture failed, err code=%d\n", ret);
+                        goto fail;
+                    }
+                }
+                frame_counter++;
+            }
+            else
+                if (range_end && processing_time <= range_end)
+                {
+                    ret = av_seek_frame(ictx, 0xFF, processing_time, 0);
+                    av_log(ictx, AV_LOG_DEBUG, "av_seek_frame %s, frame=%d\n", GetStringFromTime(processing_time), frame_counter);
+                    if (0 == ret)
+                    {
+                        avformat_flush(ictx);
+                    }
+                    else
+                    {
+                        av_log(ictx, AV_LOG_DEBUG, "Range capture failed, err code=%d\n", ret);
+                        goto fail;
+                    }
+
+                    processing_time += range_interval;
+                    frame_counter++;
+                }
+                else
+                {
+                    av_log(NULL, AV_LOG_DEBUG, "Range capture finished!\n");
+                    break;
+                }
+        }
+        //asvzzz
+        else
+            //asvzzz rtsp_range_npt
+            if (npt_range_interval64)
+            {
+
+                av_log(ictx, AV_LOG_DEBUG, "npt_processing_time64=%lld, npt_range_end64=%lld, npt_range_interval64=%lld\n", npt_processing_time64, npt_range_end64, npt_range_interval64);
+
+                if (npt_processing_time64 <= npt_range_end64)
+                {
+                    AVFormatContext *ictx = input_files[0]->ctx;
+                    ret = av_seek_frame(ictx, 0, npt_processing_time64, 0);
+                    av_log(ictx, AV_LOG_DEBUG, "av_seek_frame npt %lld, frame=%d\n", npt_processing_time64, frame_counter);
+                    if (0 == ret)
+                    {
+                        avformat_flush(ictx);
+                    }
+                    else
+                    {
+                        av_log(ictx, AV_LOG_DEBUG, "npt Range capture failed, err code=%d\n", ret);
+                        goto fail;
+                    }
+
+                    npt_processing_time64 += npt_range_interval64;
+                    frame_counter++;
+                }
+                else
+                {
+                    av_log(NULL, AV_LOG_DEBUG, "npt Range capture finished!\n");
+                    break;
+                }
+            }
+        //asvzzz
 
         /* if 'q' pressed, exits */
         if (stdin_interaction)

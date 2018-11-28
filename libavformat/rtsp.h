@@ -21,6 +21,10 @@
 #ifndef AVFORMAT_RTSP_H
 #define AVFORMAT_RTSP_H
 
+ //asvzzz rtsp_range_clock
+#define RTSP_RANGE_CLOCK 1
+//asvzzz
+
 #include <stdint.h>
 #include "avformat.h"
 #include "rtspcodes.h"
@@ -238,6 +242,12 @@ typedef struct RTSPState {
      * see rtsp_read_play() and rtsp_read_seek(). */
     int64_t seek_timestamp;
 
+    //asvzzz rtsp_range_clock
+    /*
+    end time in Range: clock=
+    */
+    int64_t seek_timestamp_end;
+
     int seq;                          /**< RTSP command sequence number */
 
     /** copy of RTSPMessageHeader->session_id, i.e. the server-provided session
@@ -409,6 +419,19 @@ typedef struct RTSPState {
 
     char default_lang[4];
     int buffer_size;
+
+//asvzzz force_transport
+    int force_transport;
+//asvzzz 
+
+//asvzzz rate_control
+    int rate_control;
+//asvzzz
+
+//asvzzz scale_control
+    int scale_control;
+//asvzzz
+
 } RTSPState;
 
 #define RTSP_FLAG_FILTER_SRC  0x1    /**< Filter incoming UDP packets -

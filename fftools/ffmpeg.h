@@ -612,6 +612,18 @@ extern int dump_enable;
 extern int dump_stream;
 //asvzzz
 
+//asvzzz rtsp_range_clock
+extern int   range_interval;
+extern char* szrange_start;
+extern char* szrange_end;
+//asvzzz
+
+//asvzzz rtsp_range_npt
+extern int npt_range_interval;
+extern int npt_range_start;
+extern int npt_range_end;
+//asvzzz
+
 extern int filter_nbthreads;
 extern int filter_complex_nbthreads;
 extern int vstats_version;

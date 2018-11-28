@@ -111,6 +111,18 @@ int filter_nbthreads = 0;
 int filter_complex_nbthreads = 0;
 int vstats_version = 2;
 
+//asvzzz rtsp_range_clock
+int range_interval = 0;
+char* szrange_start = NULL;
+char* szrange_end = NULL;
+//asvzzz
+
+//asvzzz rtsp_range_npt
+int npt_range_interval = 0;
+int npt_range_start = NULL;
+int npt_range_end = NULL;
+//asvzzz
+
 //asvzzz dump
 int dump_enable = 0;
 int dump_stream = 0;
@@ -3711,6 +3723,24 @@ const OptionDef options[] = {
         "initialise hardware device", "args" },
     { "filter_hw_device", HAS_ARG | OPT_EXPERT, { .func_arg = opt_filter_hw_device },
         "set hardware device used when filtering", "device" },
+
+//asvzzz rtsp_range_clock
+    { "range_start",              HAS_ARG | OPT_STRING,{ &szrange_start },
+        "start timestamp for series capture", "time as 20170828T140815Z" },
+    { "range_end",                HAS_ARG | OPT_STRING,{ &szrange_end },
+        "last timestamp for series capture", "time as 20170828T140815Z" },
+    { "range_interval",           HAS_ARG | OPT_INT,{ &range_interval },
+        "interval in seconds for series capture", "time in seconds" },
+//asvzzz
+
+//asvzzz rtsp_range_npt
+    { "npt_range_start",              HAS_ARG | OPT_INT,{ &npt_range_start },
+        "start offset in seconds for series capture", "time in seconds" },
+    { "npt_range_end",                HAS_ARG | OPT_INT,{ &npt_range_end },
+        "end offset for series capture", "time in seconds" },
+    { "npt_range_interval",           HAS_ARG | OPT_INT,{ &npt_range_interval },
+        "interval in seconds for series capture", "time in seconds" },
+//asvzzz
 
 //asvzzz dump
     { "dump_enable",              HAS_ARG | OPT_INT,{ &dump_enable },
