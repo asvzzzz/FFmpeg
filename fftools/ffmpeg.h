@@ -607,6 +607,11 @@ extern AVIOContext *progress_avio;
 extern float max_error_rate;
 extern char *videotoolbox_pixfmt;
 
+//asvzzz dump
+extern int dump_enable;
+extern int dump_stream;
+//asvzzz
+
 extern int filter_nbthreads;
 extern int filter_complex_nbthreads;
 extern int vstats_version;

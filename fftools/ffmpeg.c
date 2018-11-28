@@ -111,6 +111,10 @@ const int program_birth_year = 2000;
 
 static FILE *vstats_file;
 
+//asvzzz dump
+FILE*  pDumpFile = NULL;
+//
+
 const char *const forced_keyframes_const_names[] = {
     "n",
     "n_forced",
@@ -2581,6 +2585,23 @@ static int process_input_packet(InputStream *ist, const AVPacket *pkt, int no_eo
         ist->saw_first_ts = 1;
     }
 
+//asvzzz dump
+    if (dump_enable && (pkt->stream_index == dump_stream))
+    {
+        if (!pDumpFile)
+        {
+            remove("./dump.dmp");
+            pDumpFile = fopen("./dump.dmp", "w+b");
+        }
+
+        if (pDumpFile)
+        {
+            fseek(pDumpFile, 0, SEEK_END);
+            fwrite(pkt->data, pkt->size, 1, pDumpFile);
+        }
+    }
+//
+
     if (ist->next_dts == AV_NOPTS_VALUE)
         ist->next_dts = ist->dts;
     if (ist->next_pts == AV_NOPTS_VALUE)
@@ -4651,6 +4672,11 @@ static int transcode(void)
     InputStream *ist;
     int64_t timer_start;
     int64_t total_packets_written = 0;
+//asvzzz stats
+    time_t start_time;
+    time_t end_time;
+    int frame_counter = 0;
+//
 
     ret = transcode_init();
     if (ret < 0)
@@ -4661,6 +4687,10 @@ static int transcode(void)
     }
 
     timer_start = av_gettime_relative();
+
+//asvzzz stats
+    start_time = time(&start_time);
+//
 
 #if HAVE_THREADS
     if ((ret = init_input_threads()) < 0)
@@ -4781,6 +4811,20 @@ static int transcode(void)
             }
         }
     }
+
+//asvzzz stats
+    end_time = time(&end_time);
+    if (frame_counter)
+        av_log(NULL, AV_LOG_DEBUG, "Processing time %d sec, %.02f sec per frame\n", end_time - start_time, (float)(end_time - start_time) / (float)frame_counter);
+    else
+        av_log(NULL, AV_LOG_DEBUG, "Processing time %d seconds\n", end_time - start_time);
+//
+
+//asvzzz dump
+    if (pDumpFile)
+        fclose(pDumpFile);
+//
+
     return ret;
 }
 

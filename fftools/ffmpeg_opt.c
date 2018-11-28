@@ -111,6 +111,10 @@ int filter_nbthreads = 0;
 int filter_complex_nbthreads = 0;
 int vstats_version = 2;
 
+//asvzzz dump
+int dump_enable = 0;
+int dump_stream = 0;
+//asvzzz
 
 static int intra_only         = 0;
 static int file_overwrite     = 0;
@@ -3707,6 +3711,13 @@ const OptionDef options[] = {
         "initialise hardware device", "args" },
     { "filter_hw_device", HAS_ARG | OPT_EXPERT, { .func_arg = opt_filter_hw_device },
         "set hardware device used when filtering", "device" },
+
+//asvzzz dump
+    { "dump_enable",              HAS_ARG | OPT_INT,{ &dump_enable },
+        "Dump enable", "bool" },
+    { "dump_stream",              HAS_ARG | OPT_INT,{ &dump_stream },
+        "Dump stream", "bool" },
+//
 
     { NULL, },
 };
