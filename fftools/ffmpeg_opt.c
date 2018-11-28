@@ -111,6 +111,14 @@ int filter_nbthreads = 0;
 int filter_complex_nbthreads = 0;
 int vstats_version = 2;
 
+//asvzzz future_t
+int future_jump_time = 0;
+//asvzzz
+
+//asvzzz non-mono pts
+int fix_nonmono_pts = 0;
+//asvzzz
+
 //asvzzz rtsp_range_clock
 int range_interval = 0;
 char* szrange_start = NULL;
@@ -3723,6 +3731,16 @@ const OptionDef options[] = {
         "initialise hardware device", "args" },
     { "filter_hw_device", HAS_ARG | OPT_EXPERT, { .func_arg = opt_filter_hw_device },
         "set hardware device used when filtering", "device" },
+
+//asvzzz future_t
+    { "future_t",              HAS_ARG | OPT_INT,{ &future_jump_time },
+        "positive pts delta time limit to stop processing", "time in msec" },
+//asvzzz 
+
+            //asvzzz non-mono pts
+    { "fix_nonmono_pts",              HAS_ARG | OPT_INT,{ &fix_nonmono_pts },
+        "Fixes non-monotonous PTS/DTS", "bool" },
+//asvzzz
 
 //asvzzz rtsp_range_clock
     { "range_start",              HAS_ARG | OPT_STRING,{ &szrange_start },

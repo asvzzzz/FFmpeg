@@ -115,6 +115,17 @@ static FILE *vstats_file;
 FILE*  pDumpFile = NULL;
 //
 
+//asvzzz
+int			ddts_aud = 0;
+int			ddts_vid = 0;
+int64_t		last_dts_aud = 0;
+int64_t		last_dts_vid = 0;
+int64_t		timestamp_aud = 0;
+int64_t		timestamp_vid = 0;
+int64_t		last_ts_aud = 0;
+//asvzzz
+
+
 const char *const forced_keyframes_const_names[] = {
     "n",
     "n_forced",
@@ -769,36 +780,112 @@ static void write_packet(OutputFile *of, AVPacket *pkt, OutputStream *ost, int u
             pkt->pts != AV_NOPTS_VALUE &&
             pkt->dts > pkt->pts) {
             av_log(s, AV_LOG_WARNING, "Invalid DTS: %"PRId64" PTS: %"PRId64" in output stream %d:%d, replacing by guess\n",
-                   pkt->dts, pkt->pts,
-                   ost->file_index, ost->st->index);
+                pkt->dts, pkt->pts,
+                ost->file_index, ost->st->index);
             pkt->pts =
-            pkt->dts = pkt->pts + pkt->dts + ost->last_mux_dts + 1
-                     - FFMIN3(pkt->pts, pkt->dts, ost->last_mux_dts + 1)
-                     - FFMAX3(pkt->pts, pkt->dts, ost->last_mux_dts + 1);
+                pkt->dts = pkt->pts + pkt->dts + ost->last_mux_dts + 1
+                - FFMIN3(pkt->pts, pkt->dts, ost->last_mux_dts + 1)
+                - FFMAX3(pkt->pts, pkt->dts, ost->last_mux_dts + 1);
         }
-        if ((st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO || st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO || st->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE) &&
+
+        //asvzzz non-mono pts
+#define MAX_AUD_DELTA   200
+#define MAX_VID_DELTA   200
+
+        if (fix_nonmono_pts && (pkt->dts != AV_NOPTS_VALUE && ost->last_mux_dts != AV_NOPTS_VALUE))
+        {
+
+            int64_t max = ost->last_mux_dts + !(s->oformat->flags & AVFMT_TS_NONSTRICT);
+
+            if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
+            {
+                //                av_log(s, AV_LOG_DEBUG, "audio dts = %"PRId64", ddts = %"PRId64", max = %"PRId64"\n", pkt->dts, pkt->dts-last_dts_aud, max);
+                int timestamp = ((pkt->dts * 1000) * st->time_base.num) / st->time_base.den;
+                if (timestamp_aud == 0)
+                    timestamp_aud = timestamp;
+                int delta_ts = timestamp - timestamp_aud;
+                if (delta_ts > 0 && delta_ts < MAX_AUD_DELTA)
+                    ddts_aud = (delta_ts * st->time_base.den) / (1000 * st->time_base.num);
+                timestamp_aud = timestamp;
+
+                static int prev_ts = 0;
+                //                av_log(s, AV_LOG_DEBUG, "st->time_base.den = %d, st->time_base.num=%d, timestamp=%d, deltaa=%d, delta_ts=%d, ddts_aud=%d\n", st->time_base.den, st->time_base.num, timestamp, timestamp-prev_ts, delta_ts, ddts_aud);
+                prev_ts = timestamp;
+                if (pkt->dts < max)
+                {
+                    av_log(s, AV_LOG_WARNING, "AAA Audio Non-monotonous DTS in output stream %d:%d; previous: %"PRId64", current: %"PRId64"; ", ost->file_index, ost->st->index, ost->last_mux_dts, pkt->dts);
+                    pkt->dts = last_dts_aud + ddts_aud;
+                    av_log(s, AV_LOG_WARNING, "AAA changed to %"PRId64"\n", pkt->dts);
+                }
+                last_dts_aud = pkt->dts;
+                last_ts_aud = ((pkt->dts * 1000) * st->time_base.num) / st->time_base.den;;
+            }
+
+            if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+            {
+                //                av_log(s, AV_LOG_DEBUG, "video dts = %"PRId64", ddts = %"PRId64", max = %"PRId64"\n", pkt->dts, pkt->dts-last_dts_vid, max);
+
+                int timestamp = ((pkt->dts * 1000) * st->time_base.num) / st->time_base.den;
+                if (timestamp_vid == 0)
+                    timestamp_vid = timestamp;
+                int delta_ts = timestamp - timestamp_vid;
+                if (delta_ts > 0 && delta_ts < MAX_VID_DELTA)
+                    ddts_vid = (delta_ts * st->time_base.den) / (1000 * st->time_base.num);
+                timestamp_vid = timestamp;
+
+                static int prev_ts = 0;
+                //                av_log(s, AV_LOG_DEBUG, "st->time_base.den = %d, st->time_base.num=%d, timestamp=%d, deltav=%d, delta_ts=%d, ddts_vid=%d\n", st->time_base.den, st->time_base.num, timestamp, timestamp-prev_ts, delta_ts, ddts_vid);
+                prev_ts = timestamp;
+                if (pkt->dts < max)
+                {
+                    av_log(s, AV_LOG_WARNING, "AAA Video1 Non-monotonous DTS in output stream %d:%d; previous: %"PRId64", current: %"PRId64"; ", ost->file_index, ost->st->index, ost->last_mux_dts, pkt->dts);
+                    pkt->dts = last_dts_vid + ddts_vid;
+                    av_log(s, AV_LOG_WARNING, "AAA changed to %"PRId64"\n", pkt->dts);
+                }
+                last_dts_vid = pkt->dts;
+            }
+            pkt->pts = pkt->dts;
+        }
+        //asvzzz
+
+        if ((st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO || st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) &&
             pkt->dts != AV_NOPTS_VALUE &&
             !(st->codecpar->codec_id == AV_CODEC_ID_VP9 && ost->stream_copy) &&
             ost->last_mux_dts != AV_NOPTS_VALUE) {
             int64_t max = ost->last_mux_dts + !(s->oformat->flags & AVFMT_TS_NONSTRICT);
-            if (pkt->dts < max) {
+            static int64_t prevdts = 0;
+            int64_t  delta = pkt->dts - prevdts;
+
+            //av_log(NULL, AV_LOG_ERROR, "max = %"PRId64", dts = %"PRId64", delta=%"PRId64" (den=%d, num=%d)\n", max, pkt->dts, delta , ost->st->time_base.den , ost->st->time_base.num);
+
+            prevdts = pkt->dts;
+
+            //asvzzz future_t
+            if (pkt->dts < max || ((future_jump_time > 0) && (pkt->dts > (max + (future_jump_time * ost->st->time_base.den / ost->st->time_base.num) / 1000)))) {
                 int loglevel = max - pkt->dts > 2 || st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ? AV_LOG_WARNING : AV_LOG_DEBUG;
                 av_log(s, loglevel, "Non-monotonous DTS in output stream "
-                       "%d:%d; previous: %"PRId64", current: %"PRId64"; ",
-                       ost->file_index, ost->st->index, ost->last_mux_dts, pkt->dts);
+                    "%d:%d; previous: %"PRId64", current: %"PRId64"; ",
+                    ost->file_index, ost->st->index, ost->last_mux_dts, pkt->dts);
                 if (exit_on_error) {
                     av_log(NULL, AV_LOG_FATAL, "aborting.\n");
                     exit_program(1);
                 }
+                //asvzzz future_t
+                if (future_jump_time > 0) {
+                    av_log(NULL, AV_LOG_FATAL, "delta dts more than limited, aborting\n");
+                    av_log(s, AV_LOG_FATAL, "ASVZZZ DTS previous: %"PRId64", current: %"PRId64", delta: %"PRId64", future_jump_time=%d; ", ost->last_mux_dts, pkt->dts, pkt->dts - ost->last_mux_dts, future_jump_time);
+                    exit_program(1);
+                }
                 av_log(s, loglevel, "changing to %"PRId64". This may result "
-                       "in incorrect timestamps in the output file.\n",
-                       max);
+                    "in incorrect timestamps in the output file.\n",
+                    max);
                 if (pkt->pts >= pkt->dts)
                     pkt->pts = FFMAX(pkt->pts, max);
                 pkt->dts = max;
             }
         }
     }
+
     ost->last_mux_dts = pkt->dts;
 
     ost->data_size += pkt->size;

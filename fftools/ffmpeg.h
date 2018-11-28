@@ -607,9 +607,12 @@ extern AVIOContext *progress_avio;
 extern float max_error_rate;
 extern char *videotoolbox_pixfmt;
 
-//asvzzz dump
-extern int dump_enable;
-extern int dump_stream;
+//asvzzz future_t
+extern int future_jump_time;
+//asvzzz 
+
+//asvzzz non-mono pts
+extern int fix_nonmono_pts;
 //asvzzz
 
 //asvzzz rtsp_range_clock
@@ -622,6 +625,11 @@ extern char* szrange_end;
 extern int npt_range_interval;
 extern int npt_range_start;
 extern int npt_range_end;
+//asvzzz
+
+//asvzzz dump
+extern int dump_enable;
+extern int dump_stream;
 //asvzzz
 
 extern int filter_nbthreads;
