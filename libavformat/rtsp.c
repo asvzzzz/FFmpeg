@@ -1571,7 +1571,7 @@ int ff_rtsp_make_setup_request(AVFormatContext *s, const char *host, int port,
                         rt->session_id, real_res, real_csum);
         }
 
-//asvzzz
+//asvzzz rtsp_range_clock
 #ifdef RTSP_RANGE_CLOCK
         if (rt->seek_timestamp)
             av_strlcatf(cmd, sizeof(cmd), "Require: onvif-replay\r\n");

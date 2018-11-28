@@ -426,6 +426,10 @@ typedef struct MpegEncContext {
     int pred;
     int huffman;
 
+//asvzzz snapshot error
+    int mjpg_ign_pts;
+//asvzzz
+
     /* MSMPEG4 specific */
     int mv_table_index;
     int rl_table_index;
@@ -663,7 +667,9 @@ FF_MPV_OPT_CMP_FUNC, \
 {"ps", "RTP payload size in bytes",                             FF_MPV_OFFSET(rtp_payload_size), AV_OPT_TYPE_INT, {.i64 = 0 }, INT_MIN, INT_MAX, FF_MPV_OPT_FLAGS }, \
 {"mepc", "Motion estimation bitrate penalty compensation (1.0 = 256)", FF_MPV_OFFSET(me_penalty_compensation), AV_OPT_TYPE_INT, {.i64 = 256 }, INT_MIN, INT_MAX, FF_MPV_OPT_FLAGS }, \
 {"mepre", "pre motion estimation", FF_MPV_OFFSET(me_pre), AV_OPT_TYPE_INT, {.i64 = 0 }, INT_MIN, INT_MAX, FF_MPV_OPT_FLAGS }, \
+{"mjpg_ign_pts", "ignore pts for jpg snapshots",                 FF_MPV_OFFSET(mjpg_ign_pts), AV_OPT_TYPE_INT, { .i64 = 0 }, INT_MIN, INT_MAX, FF_MPV_OPT_FLAGS }, \
 
+//asvzzz snapshot error
 extern const AVOption ff_mpv_generic_options[];
 
 /**

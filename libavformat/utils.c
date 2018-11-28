@@ -2993,6 +2993,22 @@ static int has_codec_parameters(AVStream *st, const char **errmsg_ptr)
             FAIL("no decodable DTS frames");
         break;
     case AVMEDIA_TYPE_VIDEO:
+//asvzzz avctx->width==0 test
+/*
+        if (avctx->pix_fmt == AV_PIX_FMT_NONE)
+        {
+            av_log(NULL, AV_LOG_ERROR, "AV_PIX_FMT_NONE\n");
+            avctx->pix_fmt = AV_PIX_FMT_YUV420P;
+        }
+        if (!avctx->width)
+        {
+            av_log(NULL, AV_LOG_ERROR, "avctx->width==0\n");
+            avctx->width = 1280;
+            avctx->height = 720;
+        }
+*/
+//asvzzz
+
         if (!avctx->width)
             FAIL("unspecified size");
         if (st->info->found_decoder >= 0 && avctx->pix_fmt == AV_PIX_FMT_NONE)

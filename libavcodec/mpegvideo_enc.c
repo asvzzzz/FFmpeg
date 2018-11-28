@@ -1169,6 +1169,10 @@ static int load_input_picture(MpegEncContext *s, const AVFrame *pic_arg)
                     av_log(s->avctx, AV_LOG_ERROR,
                            "Invalid pts (%"PRId64") <= last (%"PRId64")\n",
                            pts, last);
+//asvzzz snapshot error
+                    av_log(s->avctx, AV_LOG_INFO, "mjpg_ign_pts=%d\n", s->mjpg_ign_pts);
+                    if (!s->mjpg_ign_pts)
+//asvzzz snapshot error
                     return AVERROR(EINVAL);
                 }
 
