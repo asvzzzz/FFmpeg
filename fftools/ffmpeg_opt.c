@@ -41,6 +41,11 @@
 #include "libavutil/pixdesc.h"
 #include "libavutil/pixfmt.h"
 
+
+ //asvzzz allowed codec lists
+int     g_audio_disable = 0;
+//asvzzz
+
 #define DEFAULT_PASS_LOGFILENAME_PREFIX "ffmpeg2pass"
 
 #define MATCH_PER_STREAM_OPT(name, type, outvar, fmtctx, st)\
@@ -997,6 +1002,63 @@ static void dump_attachment(AVStream *st, const char *filename)
     avio_close(out);
 }
 
+
+//asvzzz allowed codec lists
+static char* del_spaces(char *str)
+{
+    int i, j;
+    int z = strlen(str);
+    int cnt = 0;
+    for (i = 0; i < z; i++)
+    {
+        if ((str[i] == '\n') || (str[i] == '\r')) str[i] = 0;
+    }
+
+    for (i = 0; i < z; i++)
+    {
+        if (str[i] == ' ')
+        {
+            cnt++;
+            for (j = i; j < z - 1; ++j)
+            {
+                str[j] = str[j + 1];
+            }
+        }
+    }
+    str[z - cnt] = '\0';
+    return str;
+}
+
+static char* get_allowed_list(char* buf, int size, char* tag)
+{
+    char* pszList = NULL;
+    char* pszTag = strstr(buf, tag);
+    if (pszTag)
+    {
+        pszTag += strlen(tag);
+        char* pszTagEnd = strstr(pszTag, "\n");
+        if (!pszTagEnd)
+            pszTagEnd = buf + size;
+        int list_size = pszTagEnd - pszTag;
+        if (list_size)
+        {
+            pszList = (char*)malloc(list_size + 1);
+            memcpy(pszList, pszTag, list_size);
+            pszList[list_size] = 0;
+        }
+    }
+
+    if (pszList)
+    {
+        del_spaces(pszList);
+    }
+
+    //    av_log(NULL, AV_LOG_FATAL, "list2 %s=%s\n", tag, pszList);
+
+    return pszList;
+}
+//asvzzz allowed codec lists
+
 static int open_input_file(OptionsContext *o, const char *filename)
 {
     InputFile *f;
@@ -1011,6 +1073,11 @@ static int open_input_file(OptionsContext *o, const char *filename)
     char *subtitle_codec_name = NULL;
     char *    data_codec_name = NULL;
     int scan_all_pmts_set = 0;
+
+//asvzzz allowed codec lists
+    if (g_audio_disable)
+        o->audio_disable = g_audio_disable;
+//asvzzz
 
     if (o->stop_time != INT64_MAX && o->recording_time != INT64_MAX) {
         o->stop_time = INT64_MAX;
@@ -1140,6 +1207,57 @@ static int open_input_file(OptionsContext *o, const char *filename)
             }
         }
     }
+
+//asvzzz allowed codec lists
+    if (1)
+    {
+        FILE* f = fopen("./allowed.cfg", "r");
+        if (f)
+        {
+            fseek(f, 0L, SEEK_END);
+            int filesize = ftell(f);
+            fseek(f, 0L, SEEK_SET);
+            int bufsize = filesize + 1;
+
+            char* buf = (char*)malloc(bufsize);
+            ret = fread(buf, sizeof(char), filesize, f);
+            fclose(f);
+            buf[filesize] = 0;
+
+            char* pszVideoWhitelist = get_allowed_list(buf, bufsize, "video:");
+            char* pszAudioWhitelist = get_allowed_list(buf, bufsize, "audio:");
+
+            for (int n = 0; n < ic->nb_streams; n++)
+            {
+                if (ic->streams[n]->codec)
+                {
+                    char* szName = avcodec_get_name(ic->streams[n]->codec->codec_id);
+                    if (ic->streams[n]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+                    {
+                        if (pszVideoWhitelist && av_match_list(szName, pszVideoWhitelist, ',') <= 0)
+                        {
+                            av_log(NULL, AV_LOG_ERROR, "Forbidden video codec (%s) is not in allowed video codec list \'%s\'\n", szName, pszVideoWhitelist);
+                            exit_program(99);
+                        }
+                    }
+                    else
+                        if (ic->streams[n]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
+                        {
+                            if (pszAudioWhitelist && av_match_list(szName, pszAudioWhitelist, ',') <= 0)
+                            {
+                                av_log(NULL, AV_LOG_ERROR, "Forbidden audio codec (%s) is not in allowed audio codec list \'%s\'\n", szName, pszAudioWhitelist);
+                                g_audio_disable = 1;
+                            }
+                        }
+                }
+            }
+            if (pszVideoWhitelist)
+                free(pszVideoWhitelist);
+            if (pszAudioWhitelist)
+                free(pszAudioWhitelist);
+        }
+    }
+//asvzzz allowed codec lists
 
     if (o->start_time != AV_NOPTS_VALUE && o->start_time_eof != AV_NOPTS_VALUE) {
         av_log(NULL, AV_LOG_WARNING, "Cannot use -ss and -sseof both, using -ss for %s\n", filename);
