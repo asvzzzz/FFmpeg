@@ -1077,16 +1077,22 @@ static int mov_write_audio_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContex
                 avio_wb16(pb, 16);
             avio_wb16(pb, track->audio_vbr ? -2 : 0); /* compression ID */
         } else { /* reserved for mp4/3gp */
-            if (track->par->codec_id == AV_CODEC_ID_FLAC ||
-                track->par->codec_id == AV_CODEC_ID_OPUS) {
+            if (track->par->codec_id == AV_CODEC_ID_PCM_MULAW ||
+                track->par->codec_id == AV_CODEC_ID_PCM_ALAW) {
                 avio_wb16(pb, track->par->channels);
-            } else {
-                avio_wb16(pb, 2);
-            }
-            if (track->par->codec_id == AV_CODEC_ID_FLAC) {
                 avio_wb16(pb, track->par->bits_per_raw_sample);
             } else {
-                avio_wb16(pb, 16);
+                if (track->par->codec_id == AV_CODEC_ID_FLAC ||
+                    track->par->codec_id == AV_CODEC_ID_OPUS) {
+                    avio_wb16(pb, track->par->channels);
+                } else {
+                    avio_wb16(pb, 2);
+                }
+                if (track->par->codec_id == AV_CODEC_ID_FLAC) {
+                    avio_wb16(pb, track->par->bits_per_raw_sample);
+                } else {
+                    avio_wb16(pb, 16);
+                }
             }
             avio_wb16(pb, 0);
         }
@@ -6782,6 +6788,8 @@ const AVCodecTag codec_mp4_tags[] = {
     { AV_CODEC_ID_DVD_SUBTITLE, MKTAG('m', 'p', '4', 's') },
     { AV_CODEC_ID_MOV_TEXT    , MKTAG('t', 'x', '3', 'g') },
     { AV_CODEC_ID_BIN_DATA    , MKTAG('g', 'p', 'm', 'd') },
+    { AV_CODEC_ID_PCM_MULAW   , MKTAG('u', 'l', 'a', 'w') },
+    { AV_CODEC_ID_PCM_ALAW    , MKTAG('a', 'l', 'a', 'w') },
     { AV_CODEC_ID_NONE        ,    0 },
 };
 
