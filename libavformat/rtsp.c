@@ -1416,6 +1416,17 @@ retry:
         av_log(s, AV_LOG_DEBUG, "%s\n", rt->last_reply);
     }
 
+    //asvzzz RTSP/1.0 400 Bad Request
+    if (reply->status_code == RTSP_STATUS_BAD_REQUEST) {
+        av_log(s, AV_LOG_ERROR, "method %s failed: %d%s\n",
+            method,
+            reply->status_code,
+            reply->reason);
+        av_log(s, AV_LOG_DEBUG, "%s\n", rt->last_reply);
+        return reply->status_code;
+    }
+    //asvzzz
+
     return 0;
 }
 
