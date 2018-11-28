@@ -209,6 +209,9 @@ typedef struct HLSContext {
     int http_persistent;
     int http_multiple;
     AVIOContext *playlist_pb;
+//asvzzz hls_max_bitrate
+    int hls_max_bitrate;
+//
 } HLSContext;
 
 static void free_segment_dynarray(struct segment **segments, int n_segments)
@@ -847,10 +850,32 @@ static int parse_playlist(HLSContext *c, const char *url,
             continue;
         } else if (line[0]) {
             if (is_variant) {
-                if (!new_variant(c, &variant_info, line, url)) {
-                    ret = AVERROR(ENOMEM);
-                    goto fail;
+
+//asvzzz hls_max_bitrate
+                //av_log(NULL, AV_LOG_FATAL, "c->hls_max_bitrate=%d\n", c->hls_max_bitrate);
+                if (c->hls_max_bitrate == 0)
+                {
+                    if (!new_variant(c, &variant_info, line, url)) {
+                        ret = AVERROR(ENOMEM);
+                        goto fail;
+                    }
                 }
+                else
+                {
+                    int num = atoi(variant_info.bandwidth);
+                    if (num < c->hls_max_bitrate)//500000)
+                    {
+                        av_log(NULL, AV_LOG_FATAL, "NEW VARIANT  %s (%s)(%i) \n", url, variant_info.bandwidth, num);
+                        if (!new_variant(c, &variant_info, line, url)) {
+                            ret = AVERROR(ENOMEM);
+                            goto fail;
+                        }
+                    }
+                }
+                ///
+//                if (!new_variant(c, &variant_info, line, url)) {
+//                    ret = AVERROR(ENOMEM);
+//                    goto fail;
                 is_variant = 0;
             }
             if (is_segment) {
@@ -2313,6 +2338,8 @@ static const AVOption hls_options[] = {
         OFFSET(http_persistent), AV_OPT_TYPE_BOOL, {.i64 = 1}, 0, 1, FLAGS },
     {"http_multiple", "Use multiple HTTP connections for fetching segments",
         OFFSET(http_multiple), AV_OPT_TYPE_BOOL, {.i64 = -1}, -1, 1, FLAGS},
+    { "hls_max_bitrate", "Max allowed bitrate",
+        OFFSET(hls_max_bitrate), AV_OPT_TYPE_INT,{.i64 = 0 }, INT_MIN, INT_MAX, FLAGS },
     {NULL}
 };
 
