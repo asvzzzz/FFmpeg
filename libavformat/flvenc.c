@@ -35,6 +35,9 @@
 #include "libavcodec/put_bits.h"
 #include "libavcodec/aacenctab.h"
 
+ //asvzzz 22500 aac
+ #define EXTENDED_RTMP_AAC   1
+ //asvzzz
 
 static const AVCodecTag flv_video_codec_ids[] = {
     { AV_CODEC_ID_FLV1,     FLV_CODECID_H263 },
@@ -129,10 +132,14 @@ static int get_audio_flags(AVFormatContext *s, AVCodecParameters *par)
     int flags = (par->bits_per_coded_sample == 16) ? FLV_SAMPLESSIZE_16BIT
                                                    : FLV_SAMPLESSIZE_8BIT;
 
+//asvzzz 22500 aac
+#ifndef EXTENDED_RTMP_AAC
     if (par->codec_id == AV_CODEC_ID_AAC) // specs force these parameters
         return FLV_CODECID_AAC | FLV_SAMPLERATE_44100HZ |
                FLV_SAMPLESSIZE_16BIT | FLV_STEREO;
-    else if (par->codec_id == AV_CODEC_ID_SPEEX) {
+    else
+#endif
+        if (par->codec_id == AV_CODEC_ID_SPEEX) {
         if (par->sample_rate != 16000) {
             av_log(s, AV_LOG_ERROR,
                    "FLV only supports wideband (16kHz) Speex audio\n");
@@ -182,6 +189,15 @@ error:
         flags |= FLV_STEREO;
 
     switch (par->codec_id) {
+
+//asvzzz 22500 aac
+#ifdef EXTENDED_RTMP_AAC
+    case AV_CODEC_ID_AAC:
+        flags |= FLV_CODECID_AAC | FLV_SAMPLESSIZE_16BIT;
+        break;
+#endif
+//asvzzz 22500 aac
+
     case AV_CODEC_ID_MP3:
         flags |= FLV_CODECID_MP3    | FLV_SAMPLESSIZE_16BIT;
         break;
